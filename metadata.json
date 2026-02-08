@@ -1,0 +1,7 @@
+{
+  "name": "PeerConnect",
+  "description": "A comprehensive university lab project for academic doubt resolution, featuring role-based access, micro-explanations, mentor verification, and a gamified credibility system.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
