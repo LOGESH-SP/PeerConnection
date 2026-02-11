@@ -7,7 +7,7 @@ import { Doubt, Answer, User, UserRole, AppNotification } from '../types';
  * Enhanced with: Error Simulation and Business Logic Constraints.
  */
 class AcademicDatabaseService {
-  private STORAGE_KEY = 'peerconnect_db_v5';
+  private STORAGE_KEY = 'peerconnect_db_v6';
 
   constructor() {
     this.initialize();
@@ -24,7 +24,8 @@ class AcademicDatabaseService {
         users: [
           { id: 1, username: 'admin', role: UserRole.ADMIN, credibilityScore: 999 },
           { id: 2, username: 'mentor_john', role: UserRole.MENTOR, credibilityScore: 250 },
-          { id: 3, username: 'student_alice', role: UserRole.STUDENT, credibilityScore: 45 }
+          { id: 3, username: 'student_alice', role: UserRole.STUDENT, credibilityScore: 45 },
+          { id: 4, username: 'student_bob', role: UserRole.STUDENT, credibilityScore: 10 }
         ],
         doubts: [
           {

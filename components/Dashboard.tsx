@@ -26,7 +26,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
 
         <div className="relative flex flex-col lg:flex-row lg:items-center justify-between gap-12">
           <div className="flex items-center space-x-8">
-            <div className="w-24 h-24 glass rounded-[2.5rem] flex items-center justify-center text-4xl font-black border-2 border-white/40 shadow-2xl rotate-3 hover:rotate-0 transition-transform duration-500">
+            <div className="w-24 h-24 glass rounded-[2.5rem] flex items-center justify-center text-4xl font-black border-2 border-white/40 shadow-2xl rotate-3 hover:rotate-0 transition-transform duration-500 text-gray-900 dark:text-white">
               {user.username[0].toUpperCase()}
             </div>
             <div>
@@ -60,22 +60,31 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
         <div className="lg:col-span-3 space-y-8">
           <div className="glass dark:bg-gray-800/40 rounded-[2.5rem] p-10 border border-white/60 dark:border-white/5 shadow-xl">
             <div className="flex items-center justify-between mb-10">
-              <h2 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight">Recent Endeavors</h2>
-              <button className="text-xs font-black uppercase tracking-widest text-primary-600 dark:text-primary-400 hover:scale-110 transition-transform">Explore Full History</button>
+              <h2 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight">My Doubts Repository</h2>
+              <span className="text-[10px] font-black uppercase tracking-widest text-primary-500 bg-primary-50 dark:bg-primary-900/20 px-4 py-1.5 rounded-full">{myDoubts.length} Total</span>
             </div>
-            <div className="space-y-4">
+            <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
               {myDoubts.length === 0 ? (
                 <div className="py-20 text-center glass rounded-3xl border-dashed border-2 border-gray-100 dark:border-gray-800/50">
                   <p className="text-gray-400 dark:text-gray-500 font-bold text-lg">Your academic footprint is currently clean.</p>
                 </div>
               ) : (
-                myDoubts.slice(0, 5).map(d => (
-                  <div key={d.id} className="p-6 glass dark:bg-gray-900/40 rounded-3xl flex justify-between items-center group hover:bg-white dark:hover:bg-gray-800 hover:shadow-lg transition-all duration-300 border border-transparent hover:border-gray-100 dark:hover:border-white/5 cursor-pointer">
-                    <div className="flex items-center space-x-4">
-                      <div className="w-3 h-3 rounded-full bg-primary-500 shadow-lg shadow-primary-500/50" />
-                      <span className="text-base font-black text-gray-800 dark:text-gray-200 truncate pr-6 transition-colors">{d.title}</span>
+                myDoubts.map(d => (
+                  <div key={d.id} className="p-6 glass dark:bg-gray-900/40 rounded-3xl flex flex-col md:flex-row md:items-center justify-between gap-4 group hover:bg-white dark:hover:bg-gray-800 hover:shadow-lg transition-all duration-300 border border-transparent hover:border-gray-100 dark:hover:border-white/5 cursor-pointer">
+                    <div className="flex items-start md:items-center space-x-4 flex-grow">
+                      <div className="mt-1.5 md:mt-0 w-3 h-3 rounded-full bg-primary-500 shadow-lg shadow-primary-500/50 flex-shrink-0" />
+                      <div className="flex flex-col">
+                        <span className="text-base font-black text-gray-800 dark:text-gray-200 line-clamp-1 transition-colors">{d.title}</span>
+                        <div className="flex items-center mt-1 space-x-3">
+                          <span className="text-[9px] font-black uppercase tracking-widest text-indigo-500 dark:text-indigo-400">{d.category}</span>
+                          <span className="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-700"></span>
+                          <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">{new Date(d.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                        </div>
+                      </div>
                     </div>
-                    <span className="text-[11px] font-black text-gray-400 uppercase opacity-60 flex-shrink-0">{new Date(d.createdAt).toLocaleDateString()}</span>
+                    <div className="flex items-center justify-end">
+                      <svg className="w-5 h-5 text-gray-300 group-hover:text-primary-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" /></svg>
+                    </div>
                   </div>
                 ))
               )}
