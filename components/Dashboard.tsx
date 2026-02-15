@@ -9,48 +9,43 @@ interface DashboardProps {
 
 const Dashboard: React.FC<DashboardProps> = ({ user }) => {
   const [myDoubts, setMyDoubts] = useState<Doubt[]>([]);
+  const [leaderboard, setLeaderboard] = useState<User[]>([]);
   
   useEffect(() => {
-    const fetchMyDoubts = async () => {
+    const fetchData = async () => {
       const allDoubts = await mockDb.getDoubts();
-      setMyDoubts(allDoubts.filter((d: Doubt) => d.userId === user.id));
+      setMyDoubts(allDoubts.filter(d => d.userId === user.id));
+      const topUsers = await mockDb.getLeaderboard();
+      setLeaderboard(topUsers);
     };
-    fetchMyDoubts();
+    fetchData();
   }, [user.id]);
   
   return (
-    <div className="space-y-10 mt-12 animate-in fade-in slide-in-from-bottom-8 duration-1000">
+    <div className="space-y-10 mt-12 animate-in fade-in slide-in-from-bottom-8 duration-1000 pb-20">
       <div className="relative overflow-hidden bg-gradient-to-br from-primary-600 via-indigo-700 to-indigo-900 rounded-[3rem] p-10 md:p-14 text-white shadow-2xl border border-white/20">
         <div className="absolute top-0 right-0 -mr-20 -mt-20 w-96 h-96 bg-white/10 rounded-full blur-[100px] pointer-events-none"></div>
-        <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-80 h-80 bg-primary-400/20 rounded-full blur-[80px] pointer-events-none"></div>
-
         <div className="relative flex flex-col lg:flex-row lg:items-center justify-between gap-12">
           <div className="flex items-center space-x-8">
-            <div className="w-24 h-24 glass rounded-[2.5rem] flex items-center justify-center text-4xl font-black border-2 border-white/40 shadow-2xl rotate-3 hover:rotate-0 transition-transform duration-500 text-gray-900 dark:text-white">
+            <div className="w-24 h-24 glass rounded-[2.5rem] flex items-center justify-center text-4xl font-black border-2 border-white/40 shadow-2xl rotate-3 transition-transform duration-500 text-gray-900 dark:text-white">
               {user.username[0].toUpperCase()}
             </div>
             <div>
               <h1 className="text-4xl md:text-5xl font-black tracking-tighter">Scholarly Pulse</h1>
               <div className="flex items-center mt-3 space-x-3">
-                <span className="px-3 py-1 bg-white/20 backdrop-blur-md rounded-lg text-[11px] font-black uppercase tracking-widest border border-white/30">
-                  {user.role}
-                </span>
+                <span className="px-3 py-1 bg-white/20 backdrop-blur-md rounded-lg text-[11px] font-black uppercase tracking-widest border border-white/30">{user.role}</span>
                 <span className="text-primary-100 font-bold opacity-80 text-sm">UID_{user.id * 1024}</span>
               </div>
             </div>
           </div>
-          
           <div className="flex flex-wrap gap-6">
-            <div className="glass bg-white/10 px-10 py-6 rounded-[2rem] border border-white/30 shadow-xl flex flex-col items-center min-w-[160px] hover:scale-105 transition-transform duration-300">
+            <div className="glass bg-white/10 px-10 py-6 rounded-[2rem] border border-white/30 shadow-xl flex flex-col items-center min-w-[160px]">
               <p className="text-[10px] uppercase tracking-[0.3em] font-black opacity-60 mb-2">Credibility</p>
               <p className="text-4xl font-black">{user.credibilityScore}</p>
             </div>
-            <div className="glass bg-white/10 px-10 py-6 rounded-[2rem] border border-white/30 shadow-xl flex flex-col items-center min-w-[160px] hover:scale-105 transition-transform duration-300">
+            <div className="glass bg-white/10 px-10 py-6 rounded-[2rem] border border-white/30 shadow-xl flex flex-col items-center min-w-[160px]">
               <p className="text-[10px] uppercase tracking-[0.3em] font-black opacity-60 mb-2">Daily Quota</p>
-              <p className="text-4xl font-black">
-                {user.doubtsPostedToday}
-                <span className="text-xl opacity-40 font-black ml-1">/{user.dailyLimit}</span>
-              </p>
+              <p className="text-4xl font-black">{user.doubtsPostedToday}<span className="text-xl opacity-40 font-black ml-1">/{user.dailyLimit}</span></p>
             </div>
           </div>
         </div>
@@ -58,9 +53,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
 
       <div className="grid lg:grid-cols-5 gap-10">
         <div className="lg:col-span-3 space-y-8">
-          <div className="glass dark:bg-gray-800/40 rounded-[2.5rem] p-10 border border-white/60 dark:border-white/5 shadow-xl">
+          <div className="glass dark:bg-gray-800/40 rounded-[2.5rem] p-10 border border-white/60 dark:border-white/5 shadow-xl h-full">
             <div className="flex items-center justify-between mb-10">
-              <h2 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight">My Doubts Repository</h2>
+              <h2 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight">Doubt Repository</h2>
               <span className="text-[10px] font-black uppercase tracking-widest text-primary-500 bg-primary-50 dark:bg-primary-900/20 px-4 py-1.5 rounded-full">{myDoubts.length} Total</span>
             </div>
             <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
@@ -70,20 +65,16 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                 </div>
               ) : (
                 myDoubts.map(d => (
-                  <div key={d.id} className="p-6 glass dark:bg-gray-900/40 rounded-3xl flex flex-col md:flex-row md:items-center justify-between gap-4 group hover:bg-white dark:hover:bg-gray-800 hover:shadow-lg transition-all duration-300 border border-transparent hover:border-gray-100 dark:hover:border-white/5 cursor-pointer">
-                    <div className="flex items-start md:items-center space-x-4 flex-grow">
-                      <div className="mt-1.5 md:mt-0 w-3 h-3 rounded-full bg-primary-500 shadow-lg shadow-primary-500/50 flex-shrink-0" />
-                      <div className="flex flex-col">
-                        <span className="text-base font-black text-gray-800 dark:text-gray-200 line-clamp-1 transition-colors">{d.title}</span>
-                        <div className="flex items-center mt-1 space-x-3">
-                          <span className="text-[9px] font-black uppercase tracking-widest text-indigo-500 dark:text-indigo-400">{d.category}</span>
-                          <span className="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-700"></span>
-                          <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">{new Date(d.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                  <div key={d.id} className="p-6 glass dark:bg-gray-900/40 rounded-3xl flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-white dark:hover:bg-gray-800 transition-all border border-transparent hover:border-gray-100">
+                    <div className="flex items-start md:items-center space-x-4">
+                      <div className="w-3 h-3 rounded-full bg-primary-500 shadow-lg shadow-primary-500/50" />
+                      <div>
+                        <span className="text-base font-black text-gray-800 dark:text-gray-200 line-clamp-1">{d.title}</span>
+                        <div className="flex items-center mt-1 space-x-3 text-[9px] font-black uppercase tracking-widest text-gray-400">
+                          <span>{d.category}</span>
+                          <span>{new Date(d.createdAt).toLocaleDateString()}</span>
                         </div>
                       </div>
-                    </div>
-                    <div className="flex items-center justify-end">
-                      <svg className="w-5 h-5 text-gray-300 group-hover:text-primary-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" /></svg>
                     </div>
                   </div>
                 ))
@@ -92,41 +83,41 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
           </div>
         </div>
 
-        <div className="lg:col-span-2 space-y-8">
-          <div className="glass dark:bg-gray-800/40 rounded-[2.5rem] p-10 border border-white/60 dark:border-white/5 shadow-xl flex flex-col h-full">
-            <h2 className="text-2xl font-black text-gray-900 dark:text-white mb-10 tracking-tight">Leveling Matrix</h2>
-            <div className="space-y-12 flex-grow">
-               <div>
-                <div className="flex justify-between text-[11px] font-black uppercase tracking-[0.2em] mb-4">
-                  <span className="text-gray-500 dark:text-gray-400">Knowledge Tier</span>
-                  <span className="text-primary-600 dark:text-primary-400">Elite Scholar</span>
+        <div className="lg:col-span-2">
+          <div className="glass dark:bg-gray-800/40 rounded-[2.5rem] p-10 border border-white/60 dark:border-white/5 shadow-xl h-full">
+            <div className="flex items-center space-x-3 mb-10">
+              <div className="w-2 h-8 bg-yellow-500 rounded-full" />
+              <h2 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight">Wall of Fame</h2>
+            </div>
+            <div className="space-y-6">
+              {leaderboard.map((u, idx) => (
+                <div 
+                  key={u.id} 
+                  className={`flex items-center justify-between p-5 rounded-3xl border transition-all ${u.id === user.id ? 'bg-primary-50 dark:bg-primary-900/10 border-primary-200 dark:border-primary-800' : 'bg-white/50 dark:bg-gray-900/50 border-gray-100 dark:border-white/5'}`}
+                >
+                  <div className="flex items-center space-x-4">
+                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-sm ${idx === 0 ? 'bg-yellow-100 text-yellow-600' : idx === 1 ? 'bg-gray-100 text-gray-600' : idx === 2 ? 'bg-orange-100 text-orange-600' : 'bg-gray-50 text-gray-400'}`}>
+                      {idx + 1}
+                    </div>
+                    <div>
+                      <span className="block text-sm font-black text-gray-800 dark:text-gray-200">{u.username}</span>
+                      <span className="block text-[9px] font-black text-gray-400 uppercase tracking-widest">{u.role}</span>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className="block text-sm font-black text-primary-600 dark:text-primary-400">{u.credibilityScore}</span>
+                    <span className="block text-[8px] font-black text-gray-400 uppercase tracking-widest">Points</span>
+                  </div>
                 </div>
-                <div className="w-full bg-gray-100 dark:bg-gray-900/60 rounded-full h-4 overflow-hidden shadow-inner border border-white/10 transition-colors">
-                  <div className="bg-gradient-to-r from-primary-500 via-indigo-500 to-indigo-700 h-full rounded-full transition-all duration-1000 shadow-lg shadow-primary-500/20" style={{ width: '74%' }}></div>
-                </div>
-                <p className="text-[10px] text-gray-400 mt-4 font-bold tracking-tight">Next upgrade in 120 Academic Points</p>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-6">
-                <div className="text-center p-6 rounded-[2rem] glass bg-primary-50 dark:bg-primary-900/10 border border-primary-100/50 dark:border-primary-900/20">
-                  <p className="text-3xl font-black text-primary-700 dark:text-primary-400">12</p>
-                  <p className="text-[9px] font-black text-primary-600/60 uppercase tracking-widest mt-1">Upvotes</p>
-                </div>
-                <div className="text-center p-6 rounded-[2rem] glass bg-green-50 dark:bg-green-900/10 border border-green-100/50 dark:border-green-800/20 transition-colors">
-                  <p className="text-3xl font-black text-green-700 dark:text-green-400 transition-colors">4</p>
-                  <p className="text-[9px] font-black text-green-600/60 uppercase tracking-widest mt-1">Verified</p>
-                </div>
-              </div>
-              
-              <div className="bg-gray-50 dark:bg-gray-950/40 p-6 rounded-[2rem] border border-gray-100 dark:border-white/5 mt-auto transition-colors">
-                <div className="flex items-center space-x-3 mb-3">
-                    <svg className="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-                    <span className="text-xs font-black uppercase text-gray-400">System Insight</span>
-                </div>
-                <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed font-medium italic">
-                  "Contribution is the fastest path to mastery. Verified solutions yield 5x more credibility."
-                </p>
-              </div>
+              ))}
+              {leaderboard.length === 0 && (
+                <p className="text-center text-gray-500 font-bold italic py-10">Ranking data initializing...</p>
+              )}
+            </div>
+            <div className="mt-10 p-6 bg-yellow-50/50 dark:bg-yellow-900/10 rounded-3xl border border-yellow-100 dark:border-yellow-900/30">
+               <p className="text-[10px] font-bold text-yellow-800 dark:text-yellow-200 uppercase tracking-tight leading-relaxed">
+                 Top scholars earn extra daily post quotas and exclusive "Verified Mentor" status. Help others to climb the ranks!
+               </p>
             </div>
           </div>
         </div>

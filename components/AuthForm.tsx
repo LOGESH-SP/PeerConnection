@@ -81,7 +81,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ onLogin }) => {
             <div className="p-6 glass bg-gray-50/50 dark:bg-black/20 rounded-[2rem] border border-gray-100/50 dark:border-white/5">
               <p className="text-center text-gray-500 dark:text-gray-400 text-[10px] font-black uppercase tracking-[0.25em] leading-loose transition-colors">
                 Available Lab Profiles:<br/>
-                <span className="text-primary-600 dark:text-primary-400 font-black">student_alice</span> • <span className="text-primary-600 dark:text-primary-400 font-black">student_bob</span> • <span className="text-indigo-600 dark:text-indigo-400 font-black">mentor_john</span><br/>
+                <span className="text-primary-600 dark:text-primary-400 font-black">student_alice</span> • <span className="text-indigo-600 dark:text-indigo-400 font-black">mentor_john</span><br/>
                 <span className="opacity-50 font-black">Key: 123</span>
               </p>
             </div>

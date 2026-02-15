@@ -25,87 +25,48 @@ const PostDoubt: React.FC<PostDoubtProps> = ({ user, onSuccess, onUpdateUser, on
     content: '', 
     category: CATEGORIES[0], 
     isAnonymous: false,
-    enableSimilarityCheck: true
+    checkSimilarity: true
   });
-  const [similarDoubts, setSimilarDoubts] = useState<Doubt[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
-  const [isScanning, setIsScanning] = useState(false);
-  const [scanPerformed, setScanPerformed] = useState(false);
+  const [similarDoubts, setSimilarDoubts] = useState<Doubt[]>([]);
 
-  const handleAPIError = (err: any) => {
-    const msg = err.message || 'A network error occurred while communicating with the repository.';
-    setError(msg);
-    if (onError) onError(msg);
-  };
-
-  const runSimilarityCheck = async () => {
-    if (!formData.title.trim()) {
-      setError('A title is mandatory for similarity scanning.');
-      return;
-    }
-    setIsScanning(true);
+  const handleClear = () => {
+    setFormData({
+      ...formData,
+      title: '',
+      content: '',
+    });
     setError('');
-    
-    try {
-      const result = await mockDb.postDoubt(user.id, { ...formData, checkOnly: true });
-      if (result.similarityFound) {
-        setSimilarDoubts(result.similar);
-        setError(`${result.similar.length} related inquiries detected. Please review.`);
-      } else {
-        setSimilarDoubts([]);
-        setError('Similarity Check Passed: This inquiry is unique.');
-      }
-      setScanPerformed(true);
-    } catch (err: any) {
-      handleAPIError(err);
-    } finally {
-      setIsScanning(false);
-    }
+    setSimilarDoubts([]);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent, force: boolean = false) => {
     e.preventDefault();
-    if (!formData.title.trim() || !formData.content.trim()) {
-      setError('Title and Content fields are required.');
-      return;
-    }
-
+    if (!formData.title.trim() || !formData.content.trim()) return;
+    
     setError('');
-    setIsScanning(true);
+    setIsSubmitting(true);
+    setSimilarDoubts([]);
     
     try {
-      const result = await mockDb.postDoubt(user.id, { 
-        ...formData, 
-        force: !formData.enableSimilarityCheck 
+      const result = await mockDb.postDoubt(user.id, formData, { 
+        checkSimilarity: formData.checkSimilarity, 
+        force: force 
       });
 
-      if (result.similarityFound && formData.enableSimilarityCheck) {
-        setSimilarDoubts(result.similar);
-        setError('Similarity Conflict: Review existing topics or Force Publish.');
-        setIsScanning(false);
+      if (result.similarityFound) {
+        setSimilarDoubts(result.similarDoubts);
+        setError('Similarity Check Conflict Detected');
+        setIsSubmitting(false);
       } else {
         const updatedUser = await mockDb.login(user.username);
         onUpdateUser(updatedUser);
-        onSuccess('Your inquiry has been broadcasted to the community.');
+        onSuccess();
       }
     } catch (err: any) {
-      handleAPIError(err);
-      setIsScanning(false);
-    }
-  };
-
-  const handleForcePost = async () => {
-    try {
-        setError('');
-        setIsScanning(true);
-        await mockDb.postDoubt(user.id, { ...formData, force: true });
-        const updatedUser = await mockDb.login(user.username);
-        onUpdateUser(updatedUser);
-        onSuccess('Inquiry force-published successfully.');
-    } catch (err: any) {
-        handleAPIError(err);
-    } finally {
-        setIsScanning(false);
+      setError(err.message);
+      setIsSubmitting(false);
     }
   };
 
@@ -113,172 +74,154 @@ const PostDoubt: React.FC<PostDoubtProps> = ({ user, onSuccess, onUpdateUser, on
     <div className="max-w-4xl mx-auto mt-12 mb-20 animate-in zoom-in-95 duration-500">
       <div className="grid lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2">
-          <div className="glass dark:bg-gray-800/40 rounded-[3rem] shadow-2xl border border-white/60 dark:border-white/5 overflow-hidden">
-            <div className="p-10 md:p-14">
-              <header className="mb-12">
-                <h2 className="text-4xl font-black text-gray-900 dark:text-white tracking-tighter">Submit Inquiry</h2>
-                <p className="text-gray-500 dark:text-gray-400 font-bold mt-1">Provide clear details for accurate help.</p>
-              </header>
+          <div className="glass dark:bg-gray-800/40 rounded-[3rem] shadow-2xl border border-white/60 dark:border-white/5 p-10 md:p-14">
+            <header className="mb-12">
+              <h2 className="text-4xl font-black text-gray-900 dark:text-white tracking-tighter">Submit Inquiry</h2>
+              <p className="text-gray-500 dark:text-gray-400 font-bold mt-1">Detailed requests get faster, verified answers.</p>
+            </header>
 
-              <form onSubmit={handleSubmit} className="space-y-8">
-                <div className="grid md:grid-cols-1 gap-8">
-                  <div>
-                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Academic Category</label>
-                    <select 
-                      className="w-full px-5 py-4 bg-white/50 dark:bg-gray-900/50 border border-gray-200 dark:border-white/5 rounded-2xl focus:ring-4 focus:ring-primary-500/10 dark:text-white outline-none font-bold"
-                      value={formData.category}
-                      onChange={e => setFormData({...formData, category: e.target.value})}
-                    >
-                      {CATEGORIES.map(cat => (
-                        <option key={cat} value={cat}>{cat}</option>
-                      ))}
-                    </select>
-                  </div>
-                  
-                  <div className="flex flex-wrap gap-6 pt-2">
-                    <label className="flex items-center cursor-pointer space-x-4 group">
-                      <div className="relative">
-                        <input 
-                          type="checkbox" 
-                          className="sr-only" 
-                          checked={formData.isAnonymous}
-                          onChange={e => setFormData({...formData, isAnonymous: e.target.checked})}
-                        />
-                        <div className={`w-10 h-6 rounded-full transition-colors ${formData.isAnonymous ? 'bg-indigo-600' : 'bg-gray-300 dark:bg-gray-700'}`}></div>
-                        <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${formData.isAnonymous ? 'translate-x-4' : ''}`}></div>
-                      </div>
-                      <span className="text-xs font-black text-gray-500 uppercase tracking-widest group-hover:text-indigo-600">Post Anonymously</span>
-                    </label>
-
-                    <label className="flex items-center cursor-pointer space-x-4 group">
-                      <div className="relative">
-                        <input 
-                          type="checkbox" 
-                          className="sr-only" 
-                          checked={formData.enableSimilarityCheck}
-                          onChange={e => setFormData({...formData, enableSimilarityCheck: e.target.checked})}
-                        />
-                        <div className={`w-10 h-6 rounded-full transition-colors ${formData.enableSimilarityCheck ? 'bg-amber-500' : 'bg-gray-300 dark:bg-gray-700'}`}></div>
-                        <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${formData.enableSimilarityCheck ? 'translate-x-4' : ''}`}></div>
-                      </div>
-                      <span className="text-xs font-black text-gray-500 uppercase tracking-widest group-hover:text-amber-600">Enable Anti-Duplicate</span>
-                    </label>
-                  </div>
-                </div>
-
-                <div>
-                  <div className="flex justify-between items-center mb-3">
-                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest">Headline</label>
-                    {formData.enableSimilarityCheck && (
-                      <button 
-                        type="button"
-                        onClick={runSimilarityCheck}
-                        disabled={isScanning || !formData.title}
-                        className="text-[10px] font-black text-primary-600 dark:text-primary-400 uppercase tracking-widest hover:underline disabled:opacity-30"
-                      >
-                        {isScanning ? 'Processing...' : 'Verify Uniqueness'}
-                      </button>
-                    )}
-                  </div>
-                  <input
-                    type="text"
-                    placeholder="Briefly summarize your doubt..."
-                    className="w-full px-6 py-4 bg-white/50 dark:bg-gray-900/50 border border-gray-200 dark:border-white/5 rounded-2xl focus:ring-4 focus:ring-primary-500/10 dark:text-white outline-none font-bold transition-all"
-                    value={formData.title}
-                    onChange={e => { setFormData({...formData, title: e.target.value}); setSimilarDoubts([]); setScanPerformed(false); }}
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Micro-Details</label>
-                  <textarea
-                    placeholder="Be specific for better explanations..."
-                    rows={6}
-                    className="w-full px-6 py-5 bg-white/50 dark:bg-gray-900/50 border border-gray-200 dark:border-white/5 rounded-[2rem] focus:ring-4 focus:ring-primary-500/10 dark:text-white outline-none font-medium transition-all shadow-inner resize-none"
-                    value={formData.content}
-                    onChange={e => setFormData({...formData, content: e.target.value})}
-                    required
-                  ></textarea>
-                </div>
-
-                <div className="flex items-center justify-between pt-10 border-t border-gray-100/50 dark:border-white/5">
-                  <div className="flex items-center space-x-3 text-xs font-black uppercase text-gray-400">
-                    <div className={`w-2 h-2 rounded-full ${isScanning ? 'bg-amber-500 animate-ping' : 'bg-green-500'}`} />
-                    <span>{isScanning ? 'Repository Search In Progress' : 'System Ready'}</span>
-                  </div>
-                  <div className="flex space-x-4">
-                    <button type="button" onClick={() => onSuccess()} className="px-6 py-3 text-xs font-black uppercase tracking-widest text-gray-400 hover:text-gray-800 transition-colors">Discard</button>
-                    <button 
-                      type="submit" 
-                      disabled={isScanning}
-                      className="px-10 py-4 bg-primary-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-primary-700 shadow-xl shadow-primary-500/20 disabled:opacity-50 active:scale-95 transition-all"
-                    >
-                      {isScanning ? 'Wait...' : 'Publish'}
-                    </button>
-                  </div>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-
-        <div className="space-y-8">
-          {/* Daily Quota Card */}
-          <div className="glass bg-white/50 dark:bg-gray-800/40 p-8 rounded-[2.5rem] border border-white/60 dark:border-white/5 shadow-xl">
-            <h3 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-widest mb-6">Daily Quota</h3>
-            <div className="flex justify-between items-end mb-4">
-               <span className="text-4xl font-black text-gray-900 dark:text-white">{user.dailyLimit - user.doubtsPostedToday}</span>
-               <span className="text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Available Posts</span>
-            </div>
-            <div className="w-full bg-gray-200 dark:bg-gray-700 h-2 rounded-full overflow-hidden">
-               <div 
-                  className="bg-primary-500 h-full transition-all duration-1000" 
-                  style={{ width: `${Math.max(0, ((user.dailyLimit - user.doubtsPostedToday) / user.dailyLimit) * 100)}%` }} 
-                />
-            </div>
-          </div>
-
-          {/* Similarity Results Card */}
-          {(similarDoubts.length > 0 || (scanPerformed && similarDoubts.length === 0)) && (
-            <div className={`glass p-8 rounded-[2.5rem] border-2 shadow-xl animate-in slide-in-from-right-8 duration-500 ${similarDoubts.length > 0 ? 'bg-amber-50/50 border-amber-200 dark:bg-amber-900/10 dark:border-amber-500/30' : 'bg-green-50/50 border-green-200 dark:bg-green-900/10 dark:border-green-500/30'}`}>
-              <div className="flex items-center justify-between mb-6">
-                <h3 className={`text-sm font-black uppercase tracking-widest ${similarDoubts.length > 0 ? 'text-amber-800 dark:text-amber-400' : 'text-green-800 dark:text-green-400'}`}>
-                  {similarDoubts.length > 0 ? 'Conflict Alert' : 'Unique Content'}
-                </h3>
+            <form onSubmit={(e) => handleSubmit(e)} className="space-y-8">
+              <div>
+                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Academic Subject</label>
+                <select 
+                  className="w-full px-5 py-4 bg-white/50 dark:bg-gray-900/50 border border-gray-200 dark:border-white/5 rounded-2xl focus:ring-4 focus:ring-primary-500/10 dark:text-white outline-none font-bold"
+                  value={formData.category}
+                  onChange={e => setFormData({...formData, category: e.target.value})}
+                >
+                  {CATEGORIES.map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
               </div>
-              
-              {similarDoubts.length > 0 ? (
-                <>
-                  <div className="space-y-4 mb-8">
+
+              <div>
+                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Headline</label>
+                <input
+                  type="text"
+                  placeholder="e.g., Understanding Convergence in Newton Method"
+                  className="w-full px-6 py-4 bg-white/50 dark:bg-gray-900/50 border border-gray-200 dark:border-white/5 rounded-2xl dark:text-white font-bold transition-all outline-none focus:bg-white"
+                  value={formData.title}
+                  onChange={e => setFormData({...formData, title: e.target.value})}
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Micro-Details</label>
+                <textarea
+                  placeholder="Explain your specific point of confusion..."
+                  rows={5}
+                  className="w-full px-6 py-5 bg-white/50 dark:bg-gray-900/50 border border-gray-200 dark:border-white/5 rounded-[2rem] dark:text-white font-medium resize-none shadow-inner outline-none focus:bg-white"
+                  value={formData.content}
+                  onChange={e => setFormData({...formData, content: e.target.value})}
+                  required
+                ></textarea>
+              </div>
+
+              <div className="flex flex-col gap-6 pt-4">
+                {/* Similarity Check Toggle - Yellow */}
+                <div className="flex items-center justify-between">
+                  <div className="flex flex-col">
+                    <span className="text-xs font-black text-gray-700 dark:text-gray-300 uppercase tracking-widest">Enable Similarity Check</span>
+                    <span className="text-[10px] text-gray-400 font-bold">Prevent duplicate academic inquiries</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setFormData({...formData, checkSimilarity: !formData.checkSimilarity})}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ring-2 ring-offset-2 ring-transparent ${formData.checkSimilarity ? 'bg-yellow-500 ring-yellow-500/20' : 'bg-gray-300 dark:bg-gray-700'}`}
+                  >
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${formData.checkSimilarity ? 'translate-x-6' : 'translate-x-1'}`} />
+                  </button>
+                </div>
+
+                {/* Anonymous Toggle - Blue */}
+                <div className="flex items-center justify-between">
+                  <div className="flex flex-col">
+                    <span className="text-xs font-black text-gray-700 dark:text-gray-300 uppercase tracking-widest">Post Anonymously</span>
+                    <span className="text-[10px] text-gray-400 font-bold">Hide your profile from non-mentors</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setFormData({...formData, isAnonymous: !formData.isAnonymous})}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ring-2 ring-offset-2 ring-transparent ${formData.isAnonymous ? 'bg-blue-600 ring-blue-600/20' : 'bg-gray-300 dark:bg-gray-700'}`}
+                  >
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${formData.isAnonymous ? 'translate-x-6' : 'translate-x-1'}`} />
+                  </button>
+                </div>
+              </div>
+
+              {similarDoubts.length > 0 && (
+                <div className="p-8 bg-amber-50 dark:bg-amber-950/20 border-2 border-amber-200 dark:border-amber-800/40 rounded-[2rem] animate-in fade-in slide-in-from-top-4">
+                  <div className="flex items-center space-x-3 mb-6 text-amber-700 dark:text-amber-400">
+                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                    <span className="text-sm font-black uppercase tracking-wider">Similarity Conflict</span>
+                  </div>
+                  <p className="text-xs text-amber-800 dark:text-amber-200 mb-4 font-bold">The following inquiries might address your confusion. We recommend checking them first to maintain feed quality:</p>
+                  <div className="space-y-3 mb-8">
                     {similarDoubts.map(d => (
-                      <div key={d.id} className="p-4 bg-white/60 dark:bg-black/20 rounded-2xl border border-amber-100 dark:border-amber-900/20 text-xs font-bold text-gray-700 dark:text-gray-300">
+                      <div key={d.id} className="p-4 bg-white/80 dark:bg-black/40 rounded-2xl text-xs font-bold text-gray-700 dark:text-gray-300 flex items-center shadow-sm">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mr-3"></span>
                         {d.title}
                       </div>
                     ))}
                   </div>
-                  <button 
-                    onClick={handleForcePost}
-                    className="w-full py-4 bg-amber-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-amber-700 shadow-lg"
-                  >
-                    Force Publish Anyway
-                  </button>
-                </>
-              ) : (
-                <div className="flex items-center space-x-3">
-                  <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                  <p className="text-xs font-bold text-green-700 dark:text-green-400">No duplicates detected in repository.</p>
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <button 
+                      type="button" 
+                      onClick={() => setSimilarDoubts([])}
+                      className="flex-1 py-3 bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-amber-200 transition-colors"
+                    >
+                      Re-edit Doubt
+                    </button>
+                    <button 
+                      type="button" 
+                      onClick={(e) => handleSubmit(e as any, true)}
+                      className="flex-1 py-3 bg-amber-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-amber-700 transition-colors shadow-lg shadow-amber-600/20"
+                    >
+                      Post Anyway
+                    </button>
+                  </div>
                 </div>
               )}
-            </div>
-          )}
 
-          {error && !similarDoubts.length && !scanPerformed && (
-            <div className="p-6 bg-red-50 dark:bg-red-900/10 border-2 border-red-200 dark:border-red-900/20 rounded-[2rem] animate-in fade-in">
-              <div className="flex items-start space-x-3">
-                <svg className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                <p className="text-red-700 dark:text-red-400 text-[10px] font-black uppercase leading-tight tracking-wider">{error}</p>
+              <div className="flex items-center justify-end space-x-4 pt-10 border-t border-gray-100 dark:border-white/5">
+                <button 
+                  type="button" 
+                  onClick={handleClear}
+                  className="px-6 py-3 text-xs font-black uppercase text-gray-500 hover:text-red-500 dark:hover:text-red-400 transition-colors"
+                >
+                  Dismiss
+                </button>
+                <button 
+                  type="submit" 
+                  disabled={isSubmitting}
+                  className="px-12 py-4 bg-primary-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-primary-700 shadow-xl active:scale-95 transition-all disabled:opacity-50 disabled:grayscale"
+                >
+                  {isSubmitting ? 'Validating...' : 'Publish Inquiry'}
+                </button>
               </div>
+            </form>
+          </div>
+        </div>
+
+        <div className="space-y-8">
+          <div className="glass dark:bg-gray-800/40 p-8 rounded-[2.5rem] border border-white/60 dark:border-white/5 shadow-xl">
+            <h3 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-widest mb-6">Laboratory Quota</h3>
+            <div className="flex justify-between items-end mb-4">
+               <span className="text-4xl font-black text-gray-900 dark:text-white">{user.dailyLimit - user.doubtsPostedToday}</span>
+               <span className="text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Available</span>
+            </div>
+            <div className="w-full bg-gray-200 dark:bg-gray-700 h-2 rounded-full overflow-hidden">
+               <div className="bg-primary-500 h-full rounded-full transition-all duration-1000" style={{ width: `${((user.dailyLimit - user.doubtsPostedToday) / user.dailyLimit) * 100}%` }} />
+            </div>
+            <p className="mt-6 text-[9px] font-bold text-gray-400 uppercase tracking-tight leading-relaxed">
+              Standard lab policy allows 5 posts/day. Verified answers increase your daily quota by +1 per contribution.
+            </p>
+          </div>
+          
+          {error && similarDoubts.length === 0 && (
+            <div className="p-6 bg-red-50 dark:bg-red-900/10 text-red-700 dark:text-red-400 text-[10px] font-black uppercase tracking-widest rounded-3xl border-2 border-red-100 dark:border-red-900/30 animate-in shake duration-500">
+              {error}
             </div>
           )}
         </div>
