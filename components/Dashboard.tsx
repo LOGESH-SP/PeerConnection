@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Doubt, User, UserRole } from '../types';
-import { mockDb } from '../services/dbService';
+import { academicDb } from '../services/dbService';
 
 interface DashboardProps {
   user: User;
@@ -13,9 +13,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
   
   useEffect(() => {
     const fetchData = async () => {
-      const allDoubts = await mockDb.getDoubts();
+      const allDoubts = await academicDb.getDoubts();
       setMyDoubts(allDoubts.filter(d => d.userId === user.id));
-      const topUsers = await mockDb.getLeaderboard();
+      const topUsers = await academicDb.getLeaderboard();
       setLeaderboard(topUsers);
     };
     fetchData();

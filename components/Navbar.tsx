@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { User, UserRole, AppNotification } from '../types';
-import { mockDb } from '../services/dbService';
+import { academicDb } from '../services/dbService';
 
 interface NavbarProps {
   user: User;
@@ -18,7 +18,7 @@ const Navbar: React.FC<NavbarProps> = ({ user, onLogout, setView, currentView, i
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const fetchNotifications = async () => {
-    const data = await mockDb.getNotifications(user.id);
+    const data = await academicDb.getNotifications(user.id);
     setNotifications(data);
   };
 
@@ -40,7 +40,7 @@ const Navbar: React.FC<NavbarProps> = ({ user, onLogout, setView, currentView, i
 
   const handleToggleNotifications = async () => {
     if (!showNotifications) {
-      await mockDb.markNotificationsRead(user.id);
+      await academicDb.markNotificationsRead(user.id);
       setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
     }
     setShowNotifications(!showNotifications);

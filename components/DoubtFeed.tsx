@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Doubt, User, UserRole } from '../types';
-import { mockDb } from '../services/dbService';
+import { academicDb } from '../services/dbService';
 import AnswerList from './AnswerList';
 import WhiteboardModal from './WhiteboardModal';
 
@@ -16,7 +16,7 @@ const DoubtFeed: React.FC<DoubtFeedProps> = ({ user }) => {
   const [showWhiteboard, setShowWhiteboard] = useState(false);
 
   const fetchDoubts = async () => {
-    const data = await mockDb.getDoubts();
+    const data = await academicDb.getDoubts();
     setDoubts(search ? data.filter(d => d.title.toLowerCase().includes(search.toLowerCase())) : data);
   };
 

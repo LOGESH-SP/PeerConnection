@@ -1,15 +1,15 @@
 
 import React, { useState } from 'react';
 import { User, UserRole } from '../types';
-import { mockDb } from '../services/dbService';
+import { academicDb } from '../services/dbService';
 
 interface AuthFormProps {
   onLogin: (user: User) => void;
 }
 
 const AuthForm: React.FC<AuthFormProps> = ({ onLogin }) => {
-  const [email, setEmail] = useState('student_alice@sonatech.ac.in');
-  const [password, setPassword] = useState('password123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [mode, setMode] = useState<'login' | 'forgot' | 'reset' | 'success'>('login');
@@ -38,7 +38,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ onLogin }) => {
       try {
         // Extract username from email for login/signup
         const username = email.split('@')[0];
-        const user = await mockDb.login(username, password, isSignUp);
+        const user = await academicDb.login(username, password, isSignUp);
         onLogin(user);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Authentication failed.');
@@ -221,17 +221,6 @@ const AuthForm: React.FC<AuthFormProps> = ({ onLogin }) => {
             </button>
           </form>
 
-          {mode === 'login' && (
-            <div className="mt-12 pt-10 border-t border-gray-100 dark:border-white/5 relative">
-              <div className="p-6 glass bg-gray-50/50 dark:bg-black/20 rounded-[2rem] border border-gray-100/50 dark:border-white/5">
-                <p className="text-center text-gray-500 dark:text-gray-400 text-[10px] font-black uppercase tracking-[0.25em] leading-loose transition-colors">
-                  Available Lab Profiles:<br/>
-                  <span className="text-primary-600 dark:text-primary-400 font-black">student_alice@sonatech.ac.in</span> • <span className="text-indigo-600 dark:text-indigo-400 font-black">mentor_john@sonatech.ac.in</span><br/>
-                  <span className="opacity-50 font-black">Key: password123</span>
-                </p>
-              </div>
-            </div>
-          )}
         </div>
         
         <p className="text-center mt-12 text-gray-400 dark:text-gray-600 text-[10px] font-black uppercase tracking-[0.4em] opacity-40">

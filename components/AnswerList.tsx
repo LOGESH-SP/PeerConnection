@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Doubt, Answer, User, UserRole } from '../types';
-import { mockDb } from '../services/dbService';
+import { academicDb } from '../services/dbService';
 
 interface AnswerListProps {
   doubt: Doubt;
@@ -17,7 +17,7 @@ const AnswerList: React.FC<AnswerListProps> = ({ doubt, currentUser, onUpdate })
 
   useEffect(() => {
     const fetchAnswers = async () => {
-      const data = await mockDb.getAnswers(doubt.id);
+      const data = await academicDb.getAnswers(doubt.id);
       setAnswers(data);
     };
     fetchAnswers();
@@ -30,8 +30,8 @@ const AnswerList: React.FC<AnswerListProps> = ({ doubt, currentUser, onUpdate })
       return;
     }
 
-    await mockDb.postAnswer(currentUser.id, doubt.id, formData);
-    const updatedAnswers = await mockDb.getAnswers(doubt.id);
+    await academicDb.postAnswer(currentUser.id, doubt.id, formData);
+    const updatedAnswers = await academicDb.getAnswers(doubt.id);
     setAnswers(updatedAnswers);
     setFormData({ step1: '', step2: '', step3: '' });
     setShowForm(false);
@@ -40,8 +40,8 @@ const AnswerList: React.FC<AnswerListProps> = ({ doubt, currentUser, onUpdate })
   };
 
   const handleVerify = async (id: number) => {
-    await mockDb.verifyAnswer(id, currentUser.id);
-    const updatedAnswers = await mockDb.getAnswers(doubt.id);
+    await academicDb.verifyAnswer(id, currentUser.id);
+    const updatedAnswers = await academicDb.getAnswers(doubt.id);
     setAnswers(updatedAnswers);
     onUpdate();
   };

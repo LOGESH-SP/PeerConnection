@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { User, Doubt } from '../types';
-import { mockDb } from '../services/dbService';
+import { academicDb } from '../services/dbService';
 
 interface PostDoubtProps {
   user: User;
@@ -50,7 +50,7 @@ const PostDoubt: React.FC<PostDoubtProps> = ({ user, onSuccess, onUpdateUser, on
     setSimilarDoubts([]);
     
     try {
-      const result = await mockDb.postDoubt(user.id, formData, { 
+      const result = await academicDb.postDoubt(user.id, formData, { 
         checkSimilarity: formData.checkSimilarity, 
         force: force 
       });
@@ -60,7 +60,7 @@ const PostDoubt: React.FC<PostDoubtProps> = ({ user, onSuccess, onUpdateUser, on
         setError('Similarity Check Conflict Detected');
         setIsSubmitting(false);
       } else {
-        const updatedUser = await mockDb.login(user.username);
+        const updatedUser = await academicDb.login(user.username);
         onUpdateUser(updatedUser);
         onSuccess();
       }
