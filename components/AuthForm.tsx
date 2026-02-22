@@ -17,6 +17,8 @@ const AuthForm: React.FC<AuthFormProps> = ({ onLogin }) => {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
+  const [isSignUp, setIsSignUp] = useState(false);
+
   const validateEmail = (e: string) => e.endsWith('@sonatech.ac.in');
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -34,12 +36,12 @@ const AuthForm: React.FC<AuthFormProps> = ({ onLogin }) => {
       }
 
       try {
-        // Extract username from email for mock login
+        // Extract username from email for login/signup
         const username = email.split('@')[0];
-        const user = await mockDb.login(username);
+        const user = await mockDb.login(username, password, isSignUp);
         onLogin(user);
       } catch (err) {
-        setError('The credentials provided do not match any scholar profile.');
+        setError(err instanceof Error ? err.message : 'Authentication failed.');
       }
     } else if (mode === 'forgot') {
       if (!validateEmail(resetEmail)) {
@@ -134,13 +136,22 @@ const AuthForm: React.FC<AuthFormProps> = ({ onLogin }) => {
                       )}
                     </button>
                   </div>
-                  <button 
-                    type="button"
-                    onClick={() => { setMode('forgot'); setError(''); }}
-                    className="mt-4 text-[10px] font-black text-primary-600 dark:text-primary-400 uppercase tracking-widest hover:underline"
-                  >
-                    Forgot password?
-                  </button>
+                  <div className="mt-4 flex justify-between items-center">
+                    <button 
+                      type="button"
+                      onClick={() => { setMode('forgot'); setError(''); }}
+                      className="text-[10px] font-black text-primary-600 dark:text-primary-400 uppercase tracking-widest hover:underline"
+                    >
+                      Forgot password?
+                    </button>
+                    <button 
+                      type="button"
+                      onClick={() => setIsSignUp(!isSignUp)}
+                      className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest hover:underline"
+                    >
+                      {isSignUp ? "Already a member?" : "New scholar? Join"}
+                    </button>
+                  </div>
                 </div>
               </>
             )}
