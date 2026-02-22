@@ -145,8 +145,31 @@ class AcademicDatabaseService {
     }
 
     const db = this.loadMock();
-    const user = db.users.find((u: any) => u.username === username);
-    if (!user) throw new Error(`AUTH_ERR: Profile "${username}" was not found.`);
+    let user = db.users.find((u: any) => u.username === username);
+    
+    if (!user) {
+      if (!isSignUp) {
+        throw new Error(`AUTH_ERR: Profile "${username}" was not found. Please Join first.`);
+      }
+      // Auto-register in Mock DB
+      const newUser = { 
+        id: Date.now(), 
+        username, 
+        password_hash: password || 'password123', 
+        role: UserRole.STUDENT, 
+        credibilityScore: 0 
+      };
+      db.users.push(newUser);
+      this.saveMock(db);
+      user = newUser;
+    } else {
+      if (isSignUp) {
+        throw new Error(`AUTH_ERR: Profile "${username}" already exists. Please Login.`);
+      }
+      if (password && user.password_hash !== password) {
+        throw new Error(`AUTH_ERR: Incorrect password for "${username}".`);
+      }
+    }
     
     const today = new Date().toISOString().split('T')[0];
     const track = db.daily_tracking.find((t: any) => t.user_id === user.id && t.tracking_date === today) || { doubts_posted: 0, bonus_limit: 0 };
