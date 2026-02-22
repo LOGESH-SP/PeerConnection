@@ -40,7 +40,7 @@ const AnswerList: React.FC<AnswerListProps> = ({ doubt, currentUser, onUpdate })
   };
 
   const handleVerify = async (id: number) => {
-    await mockDb.verifyAnswer(id);
+    await mockDb.verifyAnswer(id, currentUser.id);
     const updatedAnswers = await mockDb.getAnswers(doubt.id);
     setAnswers(updatedAnswers);
     onUpdate();

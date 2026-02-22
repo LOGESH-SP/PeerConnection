@@ -391,10 +391,16 @@ class AcademicDatabaseService {
     return newAnswer;
   }
 
-  async verifyAnswer(answerId: number) {
+  async verifyAnswer(answerId: number, verifierId: number) {
     await this.simulateNetwork();
 
     if (this.useSupabase) {
+      // Check if verifier is a mentor
+      const { data: verifier } = await supabase.from('users').select('role').eq('id', verifierId).single();
+      if (!verifier || verifier.role !== UserRole.MENTOR) {
+        throw new Error('AUTH_ERR: Only mentors can verify answers.');
+      }
+
       const { data: ans, error } = await supabase
         .from('answers')
         .update({ is_verified: true })
@@ -414,6 +420,11 @@ class AcademicDatabaseService {
     }
 
     const db = this.loadMock();
+    const verifier = db.users.find((u: any) => u.id === verifierId);
+    if (!verifier || verifier.role !== UserRole.MENTOR) {
+      throw new Error('AUTH_ERR: Only mentors can verify answers.');
+    }
+
     const ans = db.answers.find((a: any) => a.id === answerId);
     if (!ans) throw new Error('DATA_ERR: Answer not found.');
     ans.isVerified = true;
