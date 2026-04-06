@@ -61,7 +61,7 @@ export const getDoubts = async (req: AuthRequest, res: Response, next: NextFunct
       .from('doubts')
       .select(`
         id, title, description, user_id, created_at, category,
-        user:users!user_id(username),
+        user:users(username),
         doubt_tags(tags(name)),
         answers(is_verified)
       `)
@@ -110,7 +110,7 @@ export const getDoubtById = async (req: Request, res: Response, next: NextFuncti
       .from('doubts')
       .select(`
         *,
-        user:users!user_id(username),
+        user:users(username),
         doubt_tags(tags(name))
       `)
       .eq('id', id)
@@ -163,7 +163,7 @@ export const getSavedDoubts = async (req: AuthRequest, res: Response, next: Next
                 doubt_id,
                 doubts:doubts(
                     *,
-                    user:users!user_id(username, role),
+                    user:users(username, role),
                     answers(is_verified),
                     doubt_tags(tags(name))
                 )
