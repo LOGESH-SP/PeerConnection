@@ -164,20 +164,26 @@ export const saveDoubt = async (req: AuthRequest, res: Response, next: NextFunct
         const { id } = req.params;
         const userId = req.user.id;
 
-        const { data: existing, error } = await supabase
+        const { data: existing, error: selectError } = await supabase
             .from('bookmarks')
             .select('id')
             .eq('user_id', userId)
-            .eq('doubt_id', id)
+            .eq('doubt_id', Number(id))
             .maybeSingle();
+
+        if (selectError && selectError.code !== 'PGRST116') {
+             throw new Error(selectError.message);
+        }
 
         if (existing) {
             // Unsave
-            await supabase.from('bookmarks').delete().eq('id', existing.id);
+            const { error: deleteError } = await supabase.from('bookmarks').delete().eq('id', existing.id);
+            if (deleteError) throw new Error(deleteError.message);
             successResponse(res, { isSaved: false }, 'Doubt unsaved');
         } else {
             // Save
-            await supabase.from('bookmarks').insert([{ user_id: userId, doubt_id: id }]);
+            const { error: insertError } = await supabase.from('bookmarks').insert([{ user_id: userId, doubt_id: Number(id) }]);
+            if (insertError) throw new Error(insertError.message);
             successResponse(res, { isSaved: true }, 'Doubt saved');
         }
     } catch (error) {
@@ -204,8 +210,10 @@ export const getSavedDoubts = async (req: AuthRequest, res: Response, next: Next
             return;
         }
 
-        const doubtIds = bookmarks.map((b: any) => b.doubt_id);
-        const { data: doubtsData } = await supabase.from('doubts').select('*').in('id', doubtIds);
+        const doubtIds = bookmarks.map((b: any) => Number(b.doubt_id));
+        const { data: doubtsData, error: doubtsError } = await supabase.from('doubts').select('*').in('id', doubtIds);
+        
+        if (doubtsError) throw new Error(doubtsError.message);
         
         // Fetch relations manually 
         const { data: users } = await supabase.from('users').select('id, username, role');

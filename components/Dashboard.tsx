@@ -14,14 +14,36 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
   const [leaderboard, setLeaderboard] = useState<User[]>([]);
   const [activeTab, setActiveTab] = useState<'posts' | 'saved'>('posts');
   
+  const [errorLog, setErrorLog] = useState('');
+
   useEffect(() => {
     const fetchData = async () => {
-      const allDoubts = await academicDb.getDoubts();
-      setMyDoubts(allDoubts.filter(d => d.userId === user.id));
-      const saved = await academicDb.getSavedDoubts();
-      setSavedDoubts(saved);
-      const topUsers = await academicDb.getLeaderboard();
-      setLeaderboard(topUsers);
+      try {
+          const allDoubts = await academicDb.getDoubts();
+          setMyDoubts(allDoubts.filter(d => d.userId === user.id));
+          
+          try {
+              const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/doubts/saved`, { 
+                  headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('doubt_app_token')}` } 
+              });
+              const rawData = await res.text();
+              console.log("SAVED DOUBTS RAW:", rawData);
+              const data = JSON.parse(rawData);
+              
+              if (!res.ok || !data.success) {
+                  setErrorLog(`Backend Error: ${data.message || data.error || rawData}`);
+              } else {
+                  setSavedDoubts(data.data || []);
+              }
+          } catch (e: any) {
+              setErrorLog(`Fetch Exception: ${e.message}`);
+          }
+          
+          const topUsers = await academicDb.getLeaderboard();
+          setLeaderboard(topUsers);
+      } catch (err) {
+          console.error(err);
+      }
     };
     fetchData();
   }, [user.id]);
@@ -127,6 +149,12 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
         
         {/* Main Section */}
         <div className="lg:col-span-2 xl:col-span-3 flex flex-col gap-8">
+
+           {errorLog && (
+             <div className="p-6 bg-red-100 dark:bg-red-900/30 border border-red-200 dark:border-red-900 rounded-[2rem] text-red-800 dark:text-red-200 text-sm font-bold">
+                ⚠️ Fetch Error: {errorLog}
+             </div>
+           )}
            
            {/* Detailed Activity and Reputation */}
            <motion.div 
