@@ -89,6 +89,13 @@ export const getDoubts = async (req: AuthRequest, res: Response, next: NextFunct
         if (dt.tags?.name) tagMap.get(dt.doubt_id).push(dt.tags.name);
     });
 
+    const userId = req.user?.id;
+    let savedSet = new Set<string | number>();
+    if (userId) {
+        const { data: bookmarks } = await supabase.from('bookmarks').select('doubt_id').eq('user_id', userId);
+        savedSet = new Set((bookmarks || []).map((b: any) => b.doubt_id));
+    }
+
     const normalizedDoubts = (doubts || []).map((d: any) => {
       const dAnswers = answerMap.get(d.id) || [];
       return {
@@ -98,7 +105,7 @@ export const getDoubts = async (req: AuthRequest, res: Response, next: NextFunct
         content: d.description,
         createdAt: d.created_at,
         tags: tagMap.get(d.id) || [],
-        isSaved: false,
+        isSaved: savedSet.has(d.id),
         answers_count: dAnswers.length,
         status: dAnswers.some((a: any) => a.is_verified) ? 'Solved' : 'Unsolved',
         routeScore: 0
@@ -157,12 +164,12 @@ export const saveDoubt = async (req: AuthRequest, res: Response, next: NextFunct
         const { id } = req.params;
         const userId = req.user.id;
 
-        const { data: existing } = await supabase
+        const { data: existing, error } = await supabase
             .from('bookmarks')
             .select('id')
             .eq('user_id', userId)
             .eq('doubt_id', id)
-            .single();
+            .maybeSingle();
 
         if (existing) {
             // Unsave
