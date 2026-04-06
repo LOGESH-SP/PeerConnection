@@ -59,12 +59,7 @@ export const getDoubts = async (req: AuthRequest, res: Response, next: NextFunct
   try {
     const { data: doubts, error } = await supabase
       .from('doubts')
-      .select(`
-        id, title, description, user_id, created_at, category,
-        user:users(username),
-        doubt_tags(tags(name)),
-        answers(is_verified)
-      `)
+      .select('id, title, description, user_id, created_at, category')
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -76,18 +71,39 @@ export const getDoubts = async (req: AuthRequest, res: Response, next: NextFunct
       return;
     }
 
-    const normalizedDoubts = (doubts || []).map((d: any) => ({
-      ...d,
-      userId: d.user_id,
-      username: d.user?.username || 'Unknown',
-      content: d.description,
-      createdAt: d.created_at,
-      tags: d.doubt_tags?.map((dt: any) => dt.tags?.name).filter(Boolean) || [],
-      isSaved: false,
-      answers_count: d.answers?.length || 0,
-      status: d.answers?.some((a: any) => a.is_verified) ? 'Solved' : 'Unsolved',
-      routeScore: 0
-    }));
+    // Fetch relations manually to prevent PostgREST join errors
+    const { data: users } = await supabase.from('users').select('id, username');
+    const userMap = new Map((users || []).map((u: any) => [u.id, u.username]));
+
+    const { data: answers } = await supabase.from('answers').select('doubt_id, is_verified');
+    const answerMap = new Map();
+    (answers || []).forEach((a: any) => {
+        if (!answerMap.has(a.doubt_id)) answerMap.set(a.doubt_id, []);
+        answerMap.get(a.doubt_id).push(a);
+    });
+
+    const { data: doubtTags } = await supabase.from('doubt_tags').select('doubt_id, tags(name)');
+    const tagMap = new Map();
+    (doubtTags || []).forEach((dt: any) => {
+        if (!tagMap.has(dt.doubt_id)) tagMap.set(dt.doubt_id, []);
+        if (dt.tags?.name) tagMap.get(dt.doubt_id).push(dt.tags.name);
+    });
+
+    const normalizedDoubts = (doubts || []).map((d: any) => {
+      const dAnswers = answerMap.get(d.id) || [];
+      return {
+        ...d,
+        userId: d.user_id,
+        username: userMap.get(d.user_id) || 'Unknown',
+        content: d.description,
+        createdAt: d.created_at,
+        tags: tagMap.get(d.id) || [],
+        isSaved: false,
+        answers_count: dAnswers.length,
+        status: dAnswers.some((a: any) => a.is_verified) ? 'Solved' : 'Unsolved',
+        routeScore: 0
+      };
+    });
 
     res.status(200).json({
       success: true,
@@ -108,11 +124,7 @@ export const getDoubtById = async (req: Request, res: Response, next: NextFuncti
     
     const { data: doubt, error } = await supabase
       .from('doubts')
-      .select(`
-        *,
-        user:users(username),
-        doubt_tags(tags(name))
-      `)
+      .select('*')
       .eq('id', id)
       .single();
 
@@ -121,7 +133,20 @@ export const getDoubtById = async (req: Request, res: Response, next: NextFuncti
       throw new Error('Doubt not found');
     }
 
-    successResponse(res, doubt, 'Doubt retrieved');
+    // Fetch relations manually
+    const { data: user } = await supabase.from('users').select('username').eq('id', doubt.user_id).single();
+    const { data: tagsData } = await supabase.from('doubt_tags').select('tags(name)').eq('doubt_id', doubt.id);
+
+    const doubtWithRelations = {
+        ...doubt,
+        userId: doubt.user_id,
+        username: user?.username || 'Unknown',
+        content: doubt.description,
+        createdAt: doubt.created_at,
+        tags: tagsData?.map((dt: any) => dt.tags?.name).filter(Boolean) || []
+    };
+
+    successResponse(res, doubtWithRelations, 'Doubt retrieved');
   } catch (error) {
     next(error);
   }
@@ -159,15 +184,7 @@ export const getSavedDoubts = async (req: AuthRequest, res: Response, next: Next
 
         const { data: bookmarks, error } = await supabase
             .from('bookmarks')
-            .select(`
-                doubt_id,
-                doubts:doubts(
-                    *,
-                    user:users(username, role),
-                    answers(is_verified),
-                    doubt_tags(tags(name))
-                )
-            `)
+            .select('doubt_id')
             .eq('user_id', userId);
 
         if (error) {
@@ -175,18 +192,47 @@ export const getSavedDoubts = async (req: AuthRequest, res: Response, next: Next
             throw new Error(error.message);
         }
 
-        const normalizedDoubts = bookmarks?.map((b: any) => {
-            const d = b.doubts;
+        if (!bookmarks || bookmarks.length === 0) {
+            successResponse(res, [], 'Saved doubts retrieved');
+            return;
+        }
+
+        const doubtIds = bookmarks.map((b: any) => b.doubt_id);
+        const { data: doubtsData } = await supabase.from('doubts').select('*').in('id', doubtIds);
+        
+        // Fetch relations manually 
+        const { data: users } = await supabase.from('users').select('id, username, role');
+        const userMap = new Map((users || []).map((u: any) => [u.id, u]));
+
+        const { data: answers } = await supabase.from('answers').select('doubt_id, is_verified').in('doubt_id', doubtIds);
+        const answerMap = new Map();
+        (answers || []).forEach((a: any) => {
+            if (!answerMap.has(a.doubt_id)) answerMap.set(a.doubt_id, []);
+            answerMap.get(a.doubt_id).push(a);
+        });
+
+        const { data: doubtTags } = await supabase.from('doubt_tags').select('doubt_id, tags(name)').in('doubt_id', doubtIds);
+        const tagMap = new Map();
+        (doubtTags || []).forEach((dt: any) => {
+            if (!tagMap.has(dt.doubt_id)) tagMap.set(dt.doubt_id, []);
+            if (dt.tags?.name) tagMap.get(dt.doubt_id).push(dt.tags.name);
+        });
+
+        const normalizedDoubts = (doubtsData || []).map((d: any) => {
+            const dAnswers = answerMap.get(d.id) || [];
+            const userObj: any = userMap.get(d.user_id) || { username: 'Unknown' };
             return {
                 ...d,
-                username: d.user?.username || 'Unknown',
+                userId: d.user_id,
+                username: userObj.username,
                 content: d.description,
-                tags: d.doubt_tags?.map((dt: any) => dt.tags?.name).filter(Boolean) || [],
+                createdAt: d.created_at,
+                tags: tagMap.get(d.id) || [],
                 isSaved: true,
-                answers_count: d.answers?.length || 0,
-                status: d.answers?.some((a: any) => a.is_verified) ? 'Solved' : 'Unsolved'
+                answers_count: dAnswers.length,
+                status: dAnswers.some((a: any) => a.is_verified) ? 'Solved' : 'Unsolved'
             };
-        }) || [];
+        });
 
         successResponse(res, normalizedDoubts, 'Saved doubts retrieved');
     } catch (error) {
